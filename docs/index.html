@@ -167,8 +167,8 @@
                         <label>Bike position<select id="bike"><option>TT / triathlon</option><option>Road race</option><option>Endurance</option></select></label>
                         <label>Road surface<select id="surface"><option>New pavement</option><option selected>Worn pavement</option><option>Poor pavement</option><option>Cobbles</option></select></label>
                         <label>Wind exposure<select id="wind"><option>Calm / sheltered</option><option selected>Typical</option><option>Exposed / windy</option></select></label>
-                        <label>Speed from (km/h)<input id="speed-from" type="number" min="20" max="65" step="1" value="34"></label>
-                        <label>Speed to (km/h)<input id="speed-to" type="number" min="20" max="65" step="1" value="44"></label>
+                        <label>Speed from (mph)<input id="speed-from" type="number" min="12" max="40" step="1" value="21"></label>
+                        <label>Speed to (mph)<input id="speed-to" type="number" min="12" max="40" step="1" value="27"></label>
                     </div>
                 </div>
                 <div>
@@ -212,8 +212,8 @@
                 bike_name: document.getElementById("bike").value,
                 surface_name: document.getElementById("surface").value,
                 wind_name: document.getElementById("wind").value,
-                speed_from_kmh: numericValue("speed-from"),
-                speed_to_kmh: numericValue("speed-to"),
+                speed_from_kmh: numericValue("speed-from") * 1.609344,
+                speed_to_kmh: numericValue("speed-to") * 1.609344,
                 front_internal_width_mm: numericValue("front-internal"),
                 front_external_width_mm: numericValue("front-external"),
                 front_rim_depth_mm: numericValue("front-depth"),
