@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Compare road tires using pressure, rolling resistance, mounted width, road surface and aerodynamic performance.">
     <title>Tire System Calculator</title>
+    <script>
+        const NativeWorker = window.Worker;
+        window.Worker = class extends NativeWorker {
+            postMessage(message, transfer) {
+                if (message?.type === "init-env") {
+                    const fixedMessage = structuredClone(message);
+                    fixedMessage.data.gradioWheelUrl = new URL(
+                        "./assets/fixed/gradio-5.45.0-cp312-none-any.whl",
+                        window.location.href,
+                    ).href;
+                    return super.postMessage(fixedMessage, transfer);
+                }
+                return super.postMessage(message, transfer);
+            }
+        };
+    </script>
     <script type="module" crossorigin src="https://cdn.jsdelivr.net/npm/@gradio/lite@5.45.0/dist/lite.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gradio/lite@5.45.0/dist/lite.css">
     <style>
