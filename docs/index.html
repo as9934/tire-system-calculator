@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Compare road tires using pressure, rolling resistance, mounted width, road surface and aerodynamic performance.">
+    <title>Tire System Calculator</title>
+    <script type="module" crossorigin src="https://cdn.jsdelivr.net/npm/@gradio/lite@5.45.0/dist/lite.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gradio/lite@5.45.0/dist/lite.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: #f4f6f2;
+            color: #101515;
+            font-family: system-ui, sans-serif;
+        }
+        header {
+            background: #111b22;
+            color: white;
+            padding: 3rem max(1.25rem, calc((100vw - 980px) / 2));
+        }
+        header small {
+            color: #b9dc35;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+        }
+        header h1 {
+            font-size: clamp(2.2rem, 6vw, 4.6rem);
+            letter-spacing: -0.055em;
+            line-height: 0.96;
+            margin: 0.8rem 0 1rem;
+            max-width: 800px;
+        }
+        header p {
+            color: #c8d0cd;
+            line-height: 1.6;
+            margin: 0;
+            max-width: 650px;
+        }
+        .loading-note {
+            color: #66706d;
+            font-size: 0.8rem;
+            margin: 1rem auto;
+            max-width: 980px;
+            padding: 0 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <small>PYTHON · GRADIO LITE · MODEL 01</small>
+        <h1>Find the fastest tire for your system.</h1>
+        <p>
+            Pressure, rolling resistance, mounted width and aerodynamic
+            behavior evaluated together.
+        </p>
+    </header>
+    <p class="loading-note">
+        The Python model runs in your browser. The first load typically takes
+        10 seconds.
+    </p>
+    <gradio-lite theme="light">
+        <gradio-requirements>
+            pandas
+        </gradio-requirements>
+        <gradio-file name="app.py" entrypoint>
+import html
+import json
+import math
+from pathlib import Path
+
+import gradio as gr
+import pandas as pd
+
+tire_specs = pd.DataFrame(
+    [
+        {
+            &quot;tire_id&quot;: &quot;str25&quot;,
+            &quot;name&quot;: &quot;Continental GP5000 S TR 25&quot;,
+            &quot;short_name&quot;: &quot;S TR 25&quot;,
+            &quot;family&quot;: &quot;str&quot;,
+            &quot;nominal_width_mm&quot;: 25,
+            &quot;base_watts&quot;: 10.1,
+            &quot;reference_pressure_psi&quot;: 80,
+            &quot;aero_watts_at_40_kmh&quot;: -0.6,
+            &quot;width_model&quot;: &quot;linear&quot;,
+            &quot;measured_width_mm&quot;: 25.3,
+            &quot;reference_internal_width_mm&quot;: 17.8,
+            &quot;front_only&quot;: False,
+            &quot;confidence&quot;: &quot;high&quot;,
+        },
+        {
+            &quot;tire_id&quot;: &quot;str28&quot;,
+            &quot;name&quot;: &quot;Continental GP5000 S TR 28&quot;,
+            &quot;short_name&quot;: &quot;S TR 28&quot;,
+            &quot;family&quot;: &quot;str&quot;,
+            &quot;nominal_width_mm&quot;: 28,
+            &quot;base_watts&quot;: 9.7,
+            &quot;reference_pressure_psi&quot;: 72,
+            &quot;aero_watts_at_40_kmh&quot;: 0.0,
+            &quot;width_model&quot;: &quot;linear&quot;,
+            &quot;measured_width_mm&quot;: 28.0,
+            &quot;reference_internal_width_mm&quot;: 17.8,
+            &quot;front_only&quot;: False,
+            &quot;confidence&quot;: &quot;high&quot;,
+        },
+        {
+            &quot;tire_id&quot;: &quot;str30&quot;,
+            &quot;name&quot;: &quot;Continental GP5000 S TR 30&quot;,
+            &quot;short_name&quot;: &quot;S TR 30&quot;,
+            &quot;family&quot;: &quot;str&quot;,
+            &quot;nominal_width_mm&quot;: 30,
+            &quot;base_watts&quot;: 10.0,
+            &quot;reference_pressure_psi&quot;: 69,
+            &quot;aero_watts_at_40_kmh&quot;: 1.1,
+            &quot;width_model&quot;: &quot;linear&quot;,
+            &quot;measured_width_mm&quot;: 29.8,
+            &quot;reference_internal_width_mm&quot;: 17.8,
+            &quot;front_only&quot;: False,
+            &quot;confidence&quot;: &quot;high&quot;,
+        },
+        {
+            &quot;tire_id&quot;: &quot;str32&quot;,
+            &quot;name&quot;: &quot;Continental GP5000 S TR 32&quot;,
+            &quot;short_name&quot;: &quot;S TR 32&quot;,
+            &quot;family&quot;: &quot;str&quot;,
+            &quot;nominal_width_mm&quot;: 32,
+            &quot;base_watts&quot;: 9.8,
+            &quot;reference_pressure_psi&quot;: 64,
+            &quot;aero_watts_at_40_kmh&quot;: 2.55,
+            &quot;width_model&quot;: &quot;linear&quot;,
+            &quot;measured_width_mm&quot;: 31.4,
+            &quot;reference_internal_width_mm&quot;: 17.8,
+            &quot;front_only&quot;: False,
+            &quot;confidence&quot;: &quot;medium&quot;,
+        },
+        {
+            &quot;tire_id&quot;: &quot;str35&quot;,
+            &quot;name&quot;: &quot;Continental GP5000 S TR 35&quot;,
+            &quot;short_name&quot;: &quot;S TR 35&quot;,
+            &quot;family&quot;: &quot;str&quot;,
+            &quot;nominal_width_mm&quot;: 35,
+            &quot;base_watts&quot;: 9.6,
+            &quot;reference_pressure_psi&quot;: 58,
+            &quot;aero_watts_at_40_kmh&quot;: 6.45,
+            &quot;width_model&quot;: &quot;linear&quot;,
+            &quot;measured_width_mm&quot;: 34.0,
+            &quot;reference_internal_width_mm&quot;: 17.8,
+            &quot;front_only&quot;: False,
+            &quot;confidence&quot;: &quot;medium&quot;,
+        },
+        {
+            &quot;tire_id&quot;: &quot;aero26&quot;,
+            &quot;name&quot;: &quot;Continental AERO 111 26&quot;,
+            &quot;short_name&quot;: &quot;AERO 111 26&quot;,
+            &quot;family&quot;: &quot;aero111&quot;,
+            &quot;nominal_width_mm&quot;: 26,
+            &quot;base_watts&quot;: 10.5,
+            &quot;reference_pressure_psi&quot;: 80,
+            &quot;aero_watts_at_40_kmh&quot;: -0.29,
+            &quot;width_model&quot;: &quot;linear&quot;,
+            &quot;measured_width_mm&quot;: 25.68,
+            &quot;reference_internal_width_mm&quot;: 22.0,
+            &quot;front_only&quot;: True,
+            &quot;confidence&quot;: &quot;high&quot;,
+        },
+        {
+            &quot;tire_id&quot;: &quot;aero29&quot;,
+            &quot;name&quot;: &quot;Continental AERO 111 29&quot;,
+            &quot;short_name&quot;: &quot;AERO 111 29&quot;,
+            &quot;family&quot;: &quot;aero111&quot;,
+            &quot;nominal_width_mm&quot;: 29,
+            &quot;base_watts&quot;: 10.5,
+            &quot;reference_pressure_psi&quot;: 72,
+            &quot;aero_watts_at_40_kmh&quot;: -1.23,
+            &quot;width_model&quot;: &quot;linear&quot;,
+            &quot;measured_width_mm&quot;: 28.81,
+            &quot;reference_internal_width_mm&quot;: 22.0,
+            &quot;front_only&quot;: True,
+            &quot;confidence&quot;: &quot;high&quot;,
+        },
+        {
+            &quot;tire_id&quot;: &quot;slr28&quot;,
+            &quot;name&quot;: &quot;Pirelli P Zero Race TLR SL-R 28&quot;,
+            &quot;short_name&quot;: &quot;SL-R 28&quot;,
+            &quot;family&quot;: &quot;slr&quot;,
+            &quot;nominal_width_mm&quot;: 28,
+            &quot;base_watts&quot;: 8.4,
+            &quot;reference_pressure_psi&quot;: 72,
+            &quot;aero_watts_at_40_kmh&quot;: -1.05,
+            &quot;width_model&quot;: &quot;slr28_box&quot;,
+            &quot;measured_width_mm&quot;: 28.5,
+            &quot;reference_internal_width_mm&quot;: 19.0,
+            &quot;front_only&quot;: False,
+            &quot;confidence&quot;: &quot;high&quot;,
+        },
+        {
+            &quot;tire_id&quot;: &quot;slr30&quot;,
+            &quot;name&quot;: &quot;Pirelli P Zero Race TLR SL-R 30&quot;,
+            &quot;short_name&quot;: &quot;SL-R 30&quot;,
+            &quot;family&quot;: &quot;slr&quot;,
+            &quot;nominal_width_mm&quot;: 30,
+            &quot;base_watts&quot;: 8.5,
+            &quot;reference_pressure_psi&quot;: 67,
+            &quot;aero_watts_at_40_kmh&quot;: -0.6,
+            &quot;width_model&quot;: &quot;linear&quot;,
+            &quot;measured_width_mm&quot;: 31.3,
+            &quot;reference_internal_width_mm&quot;: 23.5,
+            &quot;front_only&quot;: False,
+            &quot;confidence&quot;: &quot;medium&quot;,
+        },
+        {
+            &quot;tire_id&quot;: &quot;tt28&quot;,
+            &quot;name&quot;: &quot;Continental GP5000 TT TR 28&quot;,
+            &quot;short_name&quot;: &quot;TT TR 28&quot;,
+            &quot;family&quot;: &quot;tt&quot;,
+            &quot;nominal_width_mm&quot;: 28,
+            &quot;base_watts&quot;: 8.3,
+            &quot;reference_pressure_psi&quot;: 72,
+            &quot;aero_watts_at_40_kmh&quot;: -0.3,
+            &quot;width_model&quot;: &quot;linear&quot;,
+            &quot;measured_width_mm&quot;: 28.0,
+            &quot;reference_internal_width_mm&quot;: 19.0,
+            &quot;front_only&quot;: False,
+            &quot;confidence&quot;: &quot;medium&quot;,
+        },
+        {
+            &quot;tire_id&quot;: &quot;tt30&quot;,
+            &quot;name&quot;: &quot;Continental GP5000 TT TR 30&quot;,
+            &quot;short_name&quot;: &quot;TT TR 30&quot;,
+            &quot;family&quot;: &quot;tt&quot;,
+            &quot;nominal_width_mm&quot;: 30,
+            &quot;base_watts&quot;: 8.5,
+            &quot;reference_pressure_psi&quot;: 67,
+            &quot;aero_watts_at_40_kmh&quot;: -0.1,
+            &quot;width_model&quot;: &quot;linear&quot;,
+            &quot;measured_width_mm&quot;: 31.3,
+            &quot;reference_internal_width_mm&quot;: 23.5,
+            &quot;front_only&quot;: False,
+            &quot;confidence&quot;: &quot;high&quot;,
+        },
+    ]
+)
+
+gravity = 9.80665
+brr_load_kg = 42.5
+brr_speed_mps = 29 / 3.6
+
+surface_specs = {
+    &quot;New pavement&quot;: {&quot;k1&quot;: 261.0, &quot;roughness&quot;: 0.006},
+    &quot;Worn pavement&quot;: {&quot;k1&quot;: 246.5, &quot;roughness&quot;: 0.022},
+    &quot;Poor pavement&quot;: {&quot;k1&quot;: 225.0, &quot;roughness&quot;: 0.07},
+    &quot;Cobbles&quot;: {&quot;k1&quot;: 199.0, &quot;roughness&quot;: 0.5},
+}
+
+bike_specs = {
+    &quot;TT / triathlon&quot;: {
+        &quot;front_load_fraction&quot;: 0.5,
+        &quot;front_pressure_coefficient&quot;: 1.0,
+        &quot;rear_pressure_coefficient&quot;: 1.0,
+    },
+    &quot;Road race&quot;: {
+        &quot;front_load_fraction&quot;: 0.45,
+        &quot;front_pressure_coefficient&quot;: 0.985,
+        &quot;rear_pressure_coefficient&quot;: 1.01,
+    },
+    &quot;Endurance&quot;: {
+        &quot;front_load_fraction&quot;: 0.44,
+        &quot;front_pressure_coefficient&quot;: 0.975,
+        &quot;rear_pressure_coefficient&quot;: 1.02,
+    },
+}
+
+wind_specs = {
+    &quot;Calm / sheltered&quot;: 0.55,
+    &quot;Typical&quot;: 1.0,
+    &quot;Exposed / windy&quot;: 1.55,
+}
+
+def clamp(value, lower_bound, upper_bound):
+    return min(upper_bound, max(lower_bound, value))
+
+
+def mounted_width_mm(tire, internal_width_mm):
+    if tire[&quot;width_model&quot;] == &quot;slr28_box&quot;:
+        if internal_width_mm &lt;= 21:
+            return 28.5 + 0.25 * (internal_width_mm - 19)
+        return 29.0 + 0.5 * (internal_width_mm - 21)
+
+    return tire[&quot;measured_width_mm&quot;] + 0.4 * (
+        internal_width_mm - tire[&quot;reference_internal_width_mm&quot;]
+    )
+
+
+def silca_pressure_psi(
+    system_weight_kg,
+    mounted_width,
+    speed_kmh,
+    surface_name,
+    bike_name,
+    axle,
+):
+    pressure_factor = (
+        0.5 * (system_weight_kg - 50)
+        + surface_specs[surface_name][&quot;k1&quot;]
+    )
+    tire_radius_term = mounted_width + 622 / 2
+    pressure_numerator = (
+        -0.00006 * mounted_width**3
+        + 0.0079 * mounted_width**2
+        - 0.4102 * mounted_width
+        + 12.725
+    ) * -226.44
+    pressure_denominator_term = (
+        (-0.5 * 9.81)
+        / (pressure_factor * (20 / mounted_width))
+        + tire_radius_term
+    )
+    contact_patch_pressure = pressure_numerator / (
+        pressure_denominator_term**2 - tire_radius_term**2
+    )
+    speed_mph = speed_kmh / 1.609344
+    speed_coefficient = 0.97 + ((speed_mph - 10) / 23) * 0.06
+    pressure_coefficient = bike_specs[bike_name][
+        f&quot;{axle}_pressure_coefficient&quot;
+    ]
+
+    return clamp(
+        contact_patch_pressure
+        * speed_coefficient
+        * pressure_coefficient,
+        28,
+        120,
+    )
+
+
+def rolling_watts(tire, pressure_psi, wheel_load_kg, speed_kmh):
+    reference_crr = tire[&quot;base_watts&quot;] / (
+        brr_load_kg * gravity * brr_speed_mps
+    )
+    pressure_adjustment = (
+        tire[&quot;reference_pressure_psi&quot;] / pressure_psi
+    ) ** 0.12
+
+    return (
+        reference_crr
+        * pressure_adjustment
+        * wheel_load_kg
+        * gravity
+        * (speed_kmh / 3.6)
+    )
+
+
+def surface_watts(
+    mounted_width,
+    wheel_load_kg,
+    speed_kmh,
+    surface_name,
+):
+    return (
+        surface_specs[surface_name][&quot;roughness&quot;]
+        * wheel_load_kg
+        * (speed_kmh / 40) ** 2.2
+        * (30 / mounted_width) ** 3
+    )
+
+
+def aero_watts(
+    tire,
+    mounted_width,
+    external_width_mm,
+    rim_depth_mm,
+    speed_kmh,
+    wind_name,
+    axle,
+    internal_width_mm,
+):
+    speed_scale = (speed_kmh / 40) ** 3
+    depth_scale = clamp(rim_depth_mm / 60, 0.65, 1.15)
+    tire_rim_overlap = max(0, mounted_width - external_width_mm)
+    is_aero_shape = tire[&quot;family&quot;] in {&quot;aero111&quot;, &quot;slr&quot;}
+    gain_multiplier = wind_specs[wind_name] if is_aero_shape else 1.0
+
+    if tire[&quot;family&quot;] == &quot;aero111&quot;:
+        fit_rate = 0.15
+    elif (
+        tire[&quot;family&quot;] == &quot;slr&quot;
+        and 22 &lt;= internal_width_mm &lt;= 25
+    ):
+        fit_rate = 0.1
+    else:
+        fit_rate = 0.35
+
+    base_aero_watts = tire[&quot;aero_watts_at_40_kmh&quot;] * (
+        depth_scale * gain_multiplier
+        if tire[&quot;aero_watts_at_40_kmh&quot;] &lt; 0
+        else 1.0
+    ) + tire_rim_overlap * fit_rate
+
+    return (
+        base_aero_watts
+        * speed_scale
+        * (1.0 if axle == &quot;front&quot; else 0.2)
+    )
+
+
+def rank_tires(
+    system_weight_kg,
+    bike_name,
+    surface_name,
+    wind_name,
+    speed_from_kmh,
+    speed_to_kmh,
+    front_internal_width_mm,
+    front_external_width_mm,
+    front_rim_depth_mm,
+    rear_internal_width_mm,
+    rear_external_width_mm,
+    rear_rim_depth_mm,
+):
+    lower_speed_kmh = min(speed_from_kmh, speed_to_kmh)
+    upper_speed_kmh = max(speed_from_kmh, speed_to_kmh)
+    speed_samples_kmh = [
+        lower_speed_kmh
+        + (upper_speed_kmh - lower_speed_kmh)
+        * sample_number
+        / 4
+        for sample_number in range(5)
+    ]
+    midpoint_speed_kmh = (
+        lower_speed_kmh + upper_speed_kmh
+    ) / 2
+    front_load_kg = (
+        system_weight_kg
+        * bike_specs[bike_name][&quot;front_load_fraction&quot;]
+    )
+    rear_load_kg = system_weight_kg - front_load_kg
+    tires = tire_specs.to_dict(&quot;records&quot;)
+    rear_tires = [
+        tire for tire in tires if not tire[&quot;front_only&quot;]
+    ]
+    result_rows = []
+
+    for front_tire in tires:
+        for rear_tire in rear_tires:
+            front_width_mm = mounted_width_mm(
+                front_tire,
+                front_internal_width_mm,
+            )
+            rear_width_mm = mounted_width_mm(
+                rear_tire,
+                rear_internal_width_mm,
+            )
+            front_pressure_psi = silca_pressure_psi(
+                system_weight_kg,
+                front_width_mm,
+                midpoint_speed_kmh,
+                surface_name,
+                bike_name,
+                &quot;front&quot;,
+            )
+            rear_pressure_psi = silca_pressure_psi(
+                system_weight_kg,
+                rear_width_mm,
+                midpoint_speed_kmh,
+                surface_name,
+                bike_name,
+                &quot;rear&quot;,
+            )
+            rolling_samples_watts = []
+            surface_samples_watts = []
+            aero_samples_watts = []
+
+            for speed_kmh in speed_samples_kmh:
+                sample_front_pressure_psi = silca_pressure_psi(
+                    system_weight_kg,
+                    front_width_mm,
+                    speed_kmh,
+                    surface_name,
+                    bike_name,
+                    &quot;front&quot;,
+                )
+                sample_rear_pressure_psi = silca_pressure_psi(
+                    system_weight_kg,
+                    rear_width_mm,
+                    speed_kmh,
+                    surface_name,
+                    bike_name,
+                    &quot;rear&quot;,
+                )
+                rolling_samples_watts.append(
+                    rolling_watts(
+                        front_tire,
+                        sample_front_pressure_psi,
+                        front_load_kg,
+                        speed_kmh,
+                    )
+                    + rolling_watts(
+                        rear_tire,
+                        sample_rear_pressure_psi,
+                        rear_load_kg,
+                        speed_kmh,
+                    )
+                )
+                surface_samples_watts.append(
+                    surface_watts(
+                        front_width_mm,
+                        front_load_kg,
+                        speed_kmh,
+                        surface_name,
+                    )
+                    + surface_watts(
+                        rear_width_mm,
+                        rear_load_kg,
+                        speed_kmh,
+                        surface_name,
+                    )
+                )
+                aero_samples_watts.append(
+                    aero_watts(
+                        front_tire,
+                        front_width_mm,
+                        front_external_width_mm,
+                        front_rim_depth_mm,
+                        speed_kmh,
+                        wind_name,
+                        &quot;front&quot;,
+                        front_internal_width_mm,
+                    )
+                    + aero_watts(
+                        rear_tire,
+                        rear_width_mm,
+                        rear_external_width_mm,
+                        rear_rim_depth_mm,
+                        speed_kmh,
+                        wind_name,
+                        &quot;rear&quot;,
+                        rear_internal_width_mm,
+                    )
+                )
+
+            rolling_loss_watts = sum(
+                rolling_samples_watts
+            ) / len(rolling_samples_watts)
+            surface_loss_watts = sum(
+                surface_samples_watts
+            ) / len(surface_samples_watts)
+            aero_loss_watts = sum(
+                aero_samples_watts
+            ) / len(aero_samples_watts)
+            result_rows.append(
+                {
+                    &quot;front_tire&quot;: front_tire[&quot;short_name&quot;],
+                    &quot;rear_tire&quot;: rear_tire[&quot;short_name&quot;],
+                    &quot;front_pressure_psi&quot;: front_pressure_psi,
+                    &quot;rear_pressure_psi&quot;: rear_pressure_psi,
+                    &quot;front_width_mm&quot;: front_width_mm,
+                    &quot;rear_width_mm&quot;: rear_width_mm,
+                    &quot;rolling_watts&quot;: rolling_loss_watts,
+                    &quot;surface_watts&quot;: surface_loss_watts,
+                    &quot;aero_watts&quot;: aero_loss_watts,
+                    &quot;total_watts&quot;: (
+                        rolling_loss_watts
+                        + surface_loss_watts
+                        + aero_loss_watts
+                    ),
+                    &quot;confidence&quot;: (
+                        &quot;high&quot;
+                        if (
+                            front_tire[&quot;confidence&quot;] == &quot;high&quot;
+                            and rear_tire[&quot;confidence&quot;] == &quot;high&quot;
+                        )
+                        else &quot;medium&quot;
+                    ),
+                }
+            )
+
+    ranked_tires = (
+        pd.DataFrame(result_rows)
+        .sort_values(&quot;total_watts&quot;)
+        .reset_index(drop=True)
+        .assign(
+            rank=lambda dataframe: dataframe.index + 1,
+            gap_watts=lambda dataframe: (
+                dataframe[&quot;total_watts&quot;]
+                - dataframe[&quot;total_watts&quot;].min()
+            ),
+        )
+    )
+
+    return ranked_tires
+
+default_ranking = rank_tires(
+    system_weight_kg=90,
+    bike_name=&quot;TT / triathlon&quot;,
+    surface_name=&quot;Worn pavement&quot;,
+    wind_name=&quot;Typical&quot;,
+    speed_from_kmh=34,
+    speed_to_kmh=44,
+    front_internal_width_mm=22,
+    front_external_width_mm=31.5,
+    front_rim_depth_mm=60,
+    rear_internal_width_mm=22,
+    rear_external_width_mm=31.5,
+    rear_rim_depth_mm=60,
+)
+
+app_css = &#x27;&#x27;&#x27;
+.gradio-container {
+    max-width: 980px !important;
+    margin: 0 auto !important;
+}
+.section-label {
+    color: #66706d;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.winner-card {
+    background: #111b22;
+    color: #ffffff;
+    padding: 1.4rem;
+    margin: 0.5rem 0 1rem;
+}
+.winner-kicker {
+    color: #b9dc35;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.winner-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.winner-grid h3 {
+    font-size: 1.05rem;
+    margin: 0.25rem 0 0.5rem;
+}
+.winner-grid p {
+    color: #d4dcda;
+    margin: 0;
+}
+.winner-total {
+    border-top: 1px solid #445158;
+    margin-top: 1rem;
+    padding-top: 1rem;
+}
+.winner-total strong {
+    color: #b9dc35;
+    font-size: 1.65rem;
+}
+.model-note {
+    color: #66706d;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+@media (max-width: 640px) {
+    .winner-grid {
+        grid-template-columns: 1fr;
+    }
+}
+&#x27;&#x27;&#x27;
+
+
+def format_outputs(ranked_tires):
+    winner = ranked_tires.iloc[0]
+    winner_html = f&#x27;&#x27;&#x27;
+    &lt;section class=&quot;winner-card&quot;&gt;
+        &lt;div class=&quot;winner-kicker&quot;&gt;Fastest modeled system&lt;/div&gt;
+        &lt;div class=&quot;winner-grid&quot;&gt;
+            &lt;div&gt;
+                &lt;small&gt;FRONT&lt;/small&gt;
+                &lt;h3&gt;{winner[&quot;front_tire&quot;]}&lt;/h3&gt;
+                &lt;p&gt;
+                    {winner[&quot;front_pressure_psi&quot;]:.1f} psi ·
+                    {winner[&quot;front_width_mm&quot;]:.1f} mm mounted
+                &lt;/p&gt;
+            &lt;/div&gt;
+            &lt;div&gt;
+                &lt;small&gt;REAR&lt;/small&gt;
+                &lt;h3&gt;{winner[&quot;rear_tire&quot;]}&lt;/h3&gt;
+                &lt;p&gt;
+                    {winner[&quot;rear_pressure_psi&quot;]:.1f} psi ·
+                    {winner[&quot;rear_width_mm&quot;]:.1f} mm mounted
+                &lt;/p&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;winner-total&quot;&gt;
+            &lt;strong&gt;{winner[&quot;total_watts&quot;]:.1f} W&lt;/strong&gt;
+            &lt;span&gt; modeled tire-system loss&lt;/span&gt;
+        &lt;/div&gt;
+    &lt;/section&gt;
+    &#x27;&#x27;&#x27;
+    ranking_table = (
+        ranked_tires
+        .head(10)
+        .loc[
+            :,
+            [
+                &quot;rank&quot;,
+                &quot;front_tire&quot;,
+                &quot;rear_tire&quot;,
+                &quot;front_pressure_psi&quot;,
+                &quot;rear_pressure_psi&quot;,
+                &quot;front_width_mm&quot;,
+                &quot;rear_width_mm&quot;,
+                &quot;total_watts&quot;,
+                &quot;gap_watts&quot;,
+                &quot;confidence&quot;,
+            ],
+        ]
+        .rename(
+            columns={
+                &quot;rank&quot;: &quot;Rank&quot;,
+                &quot;front_tire&quot;: &quot;Front&quot;,
+                &quot;rear_tire&quot;: &quot;Rear&quot;,
+                &quot;front_pressure_psi&quot;: &quot;Front psi&quot;,
+                &quot;rear_pressure_psi&quot;: &quot;Rear psi&quot;,
+                &quot;front_width_mm&quot;: &quot;Front mm&quot;,
+                &quot;rear_width_mm&quot;: &quot;Rear mm&quot;,
+                &quot;total_watts&quot;: &quot;Total W&quot;,
+                &quot;gap_watts&quot;: &quot;Gap W&quot;,
+                &quot;confidence&quot;: &quot;Confidence&quot;,
+            }
+        )
+        .round(
+            {
+                &quot;Front psi&quot;: 1,
+                &quot;Rear psi&quot;: 1,
+                &quot;Front mm&quot;: 1,
+                &quot;Rear mm&quot;: 1,
+                &quot;Total W&quot;: 1,
+                &quot;Gap W&quot;: 1,
+            }
+        )
+    )
+
+    return winner_html, ranking_table
+
+
+default_winner_html, default_ranking_table = format_outputs(
+    default_ranking
+)
+
+with gr.Blocks(
+    title=&quot;Tire System Calculator&quot;,
+    css=app_css,
+) as demo:
+    gr.Markdown(
+        &quot;### INPUTS&quot;,
+        elem_classes=[&quot;section-label&quot;],
+    )
+
+    with gr.Row():
+        with gr.Column():
+            system_weight = gr.Slider(
+                minimum=55,
+                maximum=150,
+                value=90,
+                step=1,
+                label=&quot;Total system weight (kg)&quot;,
+            )
+            bike = gr.Dropdown(
+                choices=list(bike_specs),
+                value=&quot;TT / triathlon&quot;,
+                label=&quot;Bike position&quot;,
+            )
+            surface = gr.Dropdown(
+                choices=list(surface_specs),
+                value=&quot;Worn pavement&quot;,
+                label=&quot;Road surface&quot;,
+            )
+            wind = gr.Dropdown(
+                choices=list(wind_specs),
+                value=&quot;Typical&quot;,
+                label=&quot;Wind exposure&quot;,
+            )
+            with gr.Row():
+                speed_from = gr.Slider(
+                    minimum=20,
+                    maximum=65,
+                    value=34,
+                    step=1,
+                    label=&quot;Speed from (km/h)&quot;,
+                )
+                speed_to = gr.Slider(
+                    minimum=20,
+                    maximum=65,
+                    value=44,
+                    step=1,
+                    label=&quot;Speed to (km/h)&quot;,
+                )
+
+        with gr.Column():
+            gr.Markdown(&quot;**Front wheel**&quot;)
+            with gr.Row():
+                front_internal_width = gr.Number(
+                    value=22,
+                    label=&quot;Internal width (mm)&quot;,
+                )
+                front_external_width = gr.Number(
+                    value=31.5,
+                    label=&quot;External width (mm)&quot;,
+                )
+                front_rim_depth = gr.Number(
+                    value=60,
+                    label=&quot;Rim depth (mm)&quot;,
+                )
+
+            gr.Markdown(&quot;**Rear wheel**&quot;)
+            with gr.Row():
+                rear_internal_width = gr.Number(
+                    value=22,
+                    label=&quot;Internal width (mm)&quot;,
+                )
+                rear_external_width = gr.Number(
+                    value=31.5,
+                    label=&quot;External width (mm)&quot;,
+                )
+                rear_rim_depth = gr.Number(
+                    value=60,
+                    label=&quot;Rim depth (mm)&quot;,
+                )
+
+    calculate_button = gr.Button(
+        &quot;Calculate fastest system&quot;,
+        variant=&quot;primary&quot;,
+    )
+
+    gr.Markdown(
+        &quot;### RECOMMENDATION&quot;,
+        elem_classes=[&quot;section-label&quot;],
+    )
+    winner_output = gr.HTML(value=default_winner_html)
+    ranking_output = gr.Dataframe(
+        value=default_ranking_table,
+        interactive=False,
+        label=&quot;Top 10 front and rear pairings&quot;,
+    )
+    gr.Markdown(
+        &#x27;&#x27;&#x27;
+        &lt;p class=&quot;model-note&quot;&gt;
+        Aero is a relative adjustment against a well-matched GP5000 S TR 28
+        setup. Common bike and rider drag is excluded because it does not
+        affect the ranking. Puncture risk is intentionally excluded.
+        &lt;/p&gt;
+        &#x27;&#x27;&#x27;
+    )
+
+    calculation_inputs = [
+        system_weight,
+        bike,
+        surface,
+        wind,
+        speed_from,
+        speed_to,
+        front_internal_width,
+        front_external_width,
+        front_rim_depth,
+        rear_internal_width,
+        rear_external_width,
+        rear_rim_depth,
+    ]
+
+    calculate_button.click(
+        fn=lambda *input_values: format_outputs(
+            rank_tires(*input_values)
+        ),
+        inputs=calculation_inputs,
+        outputs=[winner_output, ranking_output],
+    )
+
+demo.launch()
+
+        </gradio-file>
+    </gradio-lite>
+</body>
+</html>

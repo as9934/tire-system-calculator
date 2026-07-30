@@ -1,0 +1,11 @@
+[project]
+name = "tire-system-calculator"
+version = "0.1.0"
+description = "A Python tire-system speed calculator built with Gradio Lite"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "gradio==5.45.0",
+    "jupyter>=1.1.1",
+    "pandas>=2.3.3",
+]
