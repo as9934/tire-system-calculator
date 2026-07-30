@@ -163,7 +163,7 @@
                 <div>
                     <p class="section-label">Rider and conditions</p>
                     <div class="field-grid">
-                        <label>Total system weight (kg)<input id="system-weight" type="number" min="55" max="150" step="1" value="90"></label>
+                        <label>Total system weight (lb)<input id="system-weight" type="number" min="120" max="330" step="1" value="198"></label>
                         <label>Bike position<select id="bike"><option>TT / triathlon</option><option>Road race</option><option>Endurance</option></select></label>
                         <label>Road surface<select id="surface"><option>New pavement</option><option selected>Worn pavement</option><option>Poor pavement</option><option>Cobbles</option></select></label>
                         <label>Wind exposure<select id="wind"><option>Calm / sheltered</option><option selected>Typical</option><option>Exposed / windy</option></select></label>
@@ -208,7 +208,7 @@
 
         function calculatorInputs() {
             return {
-                system_weight_kg: numericValue("system-weight"),
+                system_weight_kg: numericValue("system-weight") * 0.45359237,
                 bike_name: document.getElementById("bike").value,
                 surface_name: document.getElementById("surface").value,
                 wind_name: document.getElementById("wind").value,
