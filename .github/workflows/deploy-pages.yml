@@ -1,4 +1,4 @@
-name: Deploy Gradio Lite to Pages
+name: Deploy and test calculator
 
 on:
   push:
@@ -27,8 +27,6 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
@@ -38,3 +36,22 @@ jobs:
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install test environment
+        run: uv sync --dev
+
+      - name: Install Chromium
+        run: uv run playwright install --with-deps chromium
+
+      - name: Test deployed calculator in Chromium
+        env:
+          CALCULATOR_URL: "${{ steps.deployment.outputs.page_url }}?v=${{ github.sha }}"
+        run: >
+          uv run jupyter nbconvert
+          --execute
+          --to notebook
+          --inplace
+          analysis/1_test_pages.ipynb

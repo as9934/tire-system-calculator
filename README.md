@@ -5,8 +5,8 @@ Bicycle Rolling Resistance test data, mounted-width estimates, road surface and
 published wind-tunnel deltas.
 
 The source is a numbered Jupyter notebook managed with `uv`. The notebook builds
-a static Gradio Lite app in `docs/` for GitHub Pages. Gradio Lite runs Python in
-the visitor's browser through WebAssembly because GitHub Pages does not execute
+a static app in `docs/` for GitHub Pages. Pyodide runs the dependency-free
+Python model in the visitor's browser because GitHub Pages does not execute
 server-side Python.
 
 ## Build the calculator
@@ -20,7 +20,9 @@ uv run jupyter nbconvert \
   analysis/0_build.ipynb
 ```
 
-The executed notebook writes `docs/index.html`.
+The executed notebook writes `docs/index.html`. A second numbered notebook runs
+the deployed app in Chromium and verifies model loading, ranking output and
+recalculation.
 
 ## Work in the notebook
 
@@ -32,8 +34,9 @@ Open `analysis/0_build.ipynb`.
 
 ## Publish
 
-Push `main` to GitHub. The Pages workflow uploads `docs/` and publishes the
-static Gradio Lite app.
+Push `main` to GitHub. The Pages workflow uploads `docs/`, publishes the static
+app and then executes `analysis/1_test_pages.ipynb` against the live URL in
+Chromium.
 
 ## Model boundaries
 
@@ -47,5 +50,5 @@ untested tire-rim combinations are labeled as estimates.
 - [Bicycle Rolling Resistance](https://www.bicyclerollingresistance.com/)
 - [Parcours AERO 111 wind-tunnel testing](https://www.parcours.cc/blogs/news/continental-aero-111-wind-tunnel-testing)
 - [Cyclingnews tire-width wind-tunnel testing](https://www.cyclingnews.com/features/what-is-the-fastest-tyre-width-for-road-cycling/)
-- [Gradio Lite](https://www.gradio.app/4.44.1/guides/gradio-lite)
+- [Pyodide](https://pyodide.org/)
 - [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site)
