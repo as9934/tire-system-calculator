@@ -177,6 +177,13 @@
         .source-grid .full-width { grid-column: 1 / -1; }
         .show-work-button { background: #ffffff; border-color: #111b22; color: #111b22; margin-top: 1rem; max-width: 230px; }
         #work-panel { margin-top: 1rem; }
+        .work-explainer { background: #e9efe3; border-radius: 8px; margin: 1rem 0; padding: 1rem; }
+        .work-explainer h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+        .work-explainer > p { color: #4f5c58; font-size: 0.86rem; line-height: 1.5; margin: 0; }
+        .work-steps { counter-reset: calculation-step; display: grid; gap: 0.7rem; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 1rem 0 0; padding: 0; }
+        .work-steps li { background: #ffffff; border-radius: 8px; color: #4f5c58; counter-increment: calculation-step; font-size: 0.82rem; line-height: 1.45; padding: 0.8rem; }
+        .work-steps li::before { color: #245f41; content: counter(calculation-step) ". "; font-weight: 800; }
+        .work-steps strong { color: #111b22; }
         .work-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .work-card { background: #f4f6f2; border-radius: 8px; padding: 1rem; }
         .work-card h3 { font-size: 0.95rem; margin-bottom: 0.55rem; }
@@ -187,7 +194,7 @@
         .work-values strong { color: #111b22; display: block; font-size: 0.92rem; }
         @media (max-width: 760px) {
             .input-grid, .winner-grid { grid-template-columns: 1fr; }
-            .wheel-grid, .source-grid, .work-grid { grid-template-columns: 1fr; }
+            .wheel-grid, .source-grid, .work-grid, .work-steps { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -851,6 +858,18 @@
             workPanel.innerHTML = `
                 <p class="section-label">Calculation for the current winner</p>
                 <h2>${winner.front_tire} front / ${winner.rear_tire} rear</h2>
+                <section class="work-explainer">
+                    <h3>Why this math, and the order it happens</h3>
+                    <p>There is no fixed speed to start from: speed changes rolling loss, surface loss and aerodynamic drag. The model therefore evaluates a tire pair at trial speeds and finds the speed that your power can sustain.</p>
+                    <ol class="work-steps">
+                        <li><strong>Build the setup.</strong> Convert each quoted tire size into its predicted mounted width on your internal rim width. Width determines air volume, contact patch and how the tire meets the rim.</li>
+                        <li><strong>Set pressure.</strong> Use system mass, front/rear load split, mounted width, bead diameter and road roughness. This gives a pressure appropriate to the tire rather than assuming one number works for every setup.</li>
+                        <li><strong>Set conditions.</strong> GPX roughness changes surface impedance. Historical weather, when loaded, changes air density and calculates the apparent-wind yaw at each course point.</li>
+                        <li><strong>Calculate losses at a trial speed.</strong> Add rolling resistance, surface impedance, tire-rim aero and rider-bike aero. Wider tires can reduce surface loss while adding frontal-area or rim-transition drag.</li>
+                        <li><strong>Match power to resistance.</strong> Convert pedal power to road power using 97% drivetrain efficiency. Increase or decrease trial speed until road power equals all four losses.</li>
+                        <li><strong>Repeat and rank.</strong> Run the same solve for every valid front/rear tire pair, then rank them by the highest sustainable steady speed. That is why the winner is a tire system, not just a tire.</li>
+                    </ol>
+                </section>
                 <div class="work-grid">
                     <article class="work-card">
                         <h3>Inputs at the solution</h3>
