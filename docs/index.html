@@ -59,7 +59,7 @@
             border-radius: 12px;
             padding: 1.25rem;
         }
-        .wizard-nav { display: grid; gap: 0.6rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 1.25rem; }
+        .wizard-nav { display: grid; gap: 0.6rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 1.25rem; }
         .wizard-tab { background: #f4f6f2; border-color: #dce2de; color: #4f5c58; margin: 0; min-height: 58px; text-align: left; }
         .wizard-tab[aria-current="step"] { background: #111b22; border-color: #111b22; color: #ffffff; }
         .wizard-step > h2 { margin-bottom: 0.35rem; }
@@ -68,6 +68,10 @@
         .wizard-actions button { margin: 0; max-width: 260px; width: auto; }
         .wizard-actions .back-button { background: #ffffff; border-color: #111b22; color: #111b22; }
         .cda-preview { background: #e9efe3; border-radius: 8px; color: #35413e; font-size: 0.88rem; line-height: 1.5; margin: 1rem 0 0; padding: 0.85rem; }
+        .inline-inputs { align-items: center; display: grid; gap: 0.45rem; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; margin-top: 0.45rem; }
+        .inline-inputs input { margin: 0; }
+        .course-choice { background: #f4f6f2; border-radius: 8px; margin: 0 0 1rem; padding: 0.85rem; }
+        .course-choice select { margin-top: 0.45rem; }
         .cda-preview strong { color: #111b22; }
         .input-grid {
             display: grid;
@@ -227,9 +231,10 @@
                 <button class="wizard-tab" type="button" data-wizard-target="1" aria-current="step">1. Tire pressure</button>
                 <button class="wizard-tab" type="button" data-wizard-target="2">2. Rider and bike aero</button>
                 <button class="wizard-tab" type="button" data-wizard-target="3">3. Course and weather</button>
+                <button id="results-tab" class="wizard-tab" type="button" data-wizard-target="4" disabled>4. Results</button>
             </nav>
             <section class="wizard-step" data-wizard-step="1">
-                <p class="section-label">Step 1 of 3</p>
+                <p class="section-label">Step 1 of 4</p>
                 <h2>Set up the tire-pressure model</h2>
                 <p class="wizard-intro">System weight, wheel diameter and internal rim width determine the tire’s air volume and the pressure calculation. The calculator will test every compatible tire pairing after you finish the remaining steps.</p>
                 <div class="input-grid">
@@ -248,16 +253,16 @@
                 <div class="wizard-actions"><span></span><button type="button" data-wizard-next="2">Next: rider and bike aero</button></div>
             </section>
             <section class="wizard-step" data-wizard-step="2" hidden>
-                <p class="section-label">Step 2 of 3</p>
+                <p class="section-label">Step 2 of 4</p>
                 <h2>Estimate rider and bike aero</h2>
                 <p class="wizard-intro">These fields set a transparent CdA estimate. It is directional, not a wind-tunnel measurement: body size and kit alter frontal area while cockpit width influences your effective position.</p>
                 <div class="input-grid">
                     <div class="field-grid">
                         <label>Average pedal power for the course (W)<input id="rider-power" type="number" min="100" max="500" step="5" value="200"><span class="field-help">Use expected course average, not Normalized Power (NP).</span></label>
                         <label>Bike position<select id="bike"><option>TT / triathlon</option><option>Road race</option><option>Endurance</option><option>Gravel race</option></select></label>
-                        <label>Height (in)<input id="rider-height" type="number" min="55" max="84" step="1" value="69"></label>
-                        <label>Shoulder width (in)<input id="shoulder-width" type="number" min="12" max="24" step="0.5" value="17"></label>
-                        <label>Handlebar / arm-pad width (in)<input id="cockpit-width" type="number" min="12" max="22" step="0.5" value="16"></label>
+                        <label>Height<div class="inline-inputs"><input id="rider-height-feet" aria-label="Height (ft)" type="number" min="4" max="8" step="1" value="5"><span>ft</span><input id="rider-height-inches" aria-label="Height (in)" type="number" min="0" max="11" step="1" value="9"><span>in</span></div></label>
+                        <label>Shoulder width (cm)<input id="shoulder-width" type="number" min="30" max="60" step="0.5" value="43"></label>
+                        <label>Handlebar / arm-pad width (cm)<input id="cockpit-width" type="number" min="30" max="56" step="0.5" value="41"></label>
                         <label>Kit type<select id="kit-type"><option>Fast trisuit</option><option selected>Standard trisuit</option><option>Jersey and bibs</option></select></label>
                     </div>
                     <div>
@@ -278,35 +283,45 @@
                 <div class="wizard-actions"><button class="back-button" type="button" data-wizard-next="1">Back: tire pressure</button><button type="button" data-wizard-next="3">Next: course and weather</button></div>
             </section>
             <section class="wizard-step" data-wizard-step="3" hidden>
-                <p class="section-label">Step 3 of 3</p>
-                <h2>Set the course conditions</h2>
-                <p class="wizard-intro">Select a fallback road surface, or upload a GPX to blend national roughness data. Add a race date to use that calendar day from the previous three years for air density and apparent-wind yaw.</p>
-                <label>Fallback surface<select id="surface"><option>New pavement</option><option selected>Worn pavement</option><option>Poor pavement</option><option>Firm gravel</option><option>Rough gravel</option><option>Cobbles</option></select></label>
-                <div class="route-panel">
-                    <p class="section-label">Course roughness (optional)</p>
-                    <label>GPX course file<input id="route-file" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
-                    <p id="route-status" data-state="idle">Upload a GPX to match roughly one-mile route samples to FHWA HPMS road-roughness data. The fallback surface fills any unmatched distance.</p>
-                    <button id="analyze-route-button" type="button" disabled>Match GPX to road roughness</button>
+                <p class="section-label">Step 3 of 4</p>
+                <h2>Describe the course</h2>
+                <p class="wizard-intro">Choose pavement condition for a quick estimate, or upload a GPX to use route-matched road roughness and historical weather.</p>
+                <div class="course-choice">
+                    <label>Do you want to upload a GPX?<select id="course-mode"><option value="pavement">No — choose pavement condition</option><option value="gpx">Yes — upload a GPX</option></select></label>
                 </div>
-                <div class="route-panel">
-                    <p class="section-label">Historical weather and yaw (optional)</p>
-                    <div class="field-grid">
-                        <label>Race date<input id="race-date" type="date"></label>
-                        <label>Bike start time<input id="race-start-time" type="time" value="07:00"></label>
+                <div id="pavement-panel">
+                    <label>Pavement condition<select id="surface"><option>New pavement</option><option selected>Worn pavement</option><option>Poor pavement</option><option>Firm gravel</option><option>Rough gravel</option><option>Cobbles</option></select></label>
+                </div>
+                <div id="gpx-panel" hidden>
+                    <div class="route-panel">
+                        <p class="section-label">Course roughness</p>
+                        <label>GPX course file<input id="route-file" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
+                        <p id="route-status" data-state="idle">Upload a GPX to match roughly one-mile route samples to FHWA HPMS road-roughness data.</p>
+                        <button id="analyze-route-button" type="button" disabled>Match GPX to road roughness</button>
                     </div>
-                    <p id="weather-status" data-state="idle">Choose a race date after uploading the GPX. The model uses the same calendar date in each of the three prior years.</p>
-                    <button id="analyze-weather-button" type="button" disabled>Use historic weather for this date</button>
+                    <div id="weather-panel" class="route-panel">
+                        <p class="section-label">Historical weather and yaw (optional)</p>
+                        <div class="field-grid">
+                            <label>Race date<input id="race-date" type="date"></label>
+                            <label>What time will you start biking?<input id="race-start-time" type="time" value="07:00"></label>
+                        </div>
+                        <p id="weather-status" data-state="idle">Choose a race date after uploading the GPX. The model uses the same calendar date in each of the three prior years.</p>
+                        <button id="analyze-weather-button" type="button" disabled>Use historic weather for this date</button>
+                    </div>
                 </div>
                 <div class="wizard-actions"><button class="back-button" type="button" data-wizard-next="2">Back: rider and bike aero</button><button id="calculate-button" type="button" disabled>Loading Python…</button></div>
             </section>
-        </section>
-        <section id="results-section" class="results" aria-live="polite" hidden>
+            <section id="results-section" class="wizard-step" data-wizard-step="4" aria-live="polite" hidden>
+            <p class="section-label">Step 4 of 4</p>
+            <h2>Your results</h2>
             <p class="section-label">Recommendation</p>
             <div id="winner-output"></div>
             <div class="table-wrap"><table id="ranking-table"></table></div>
-            <p class="model-note">Speed is solved from average power at the pedals and a transparent CdA estimate based on riding position, height, shoulder width, cockpit width and kit type. Treat absolute mph as an estimate and compare the tire-to-tire speed gaps. A matched GPX blends FHWA HPMS International Roughness Index (IRI) measurements with the selected fallback surface for unmatched distance. Historic weather uses the selected date’s three prior calendar years. The power-solved speed determines each route sample’s arrival hour, which supplies air density to the speed model and produces a reported apparent-wind yaw. Published tests do show yaw behavior, but this catalog currently stores one aero baseline per tire rather than a digitized tire-and-rim curve at each yaw angle. IRI is translated into this model’s pressure and roughness curve, not treated as a direct laboratory rolling-resistance test. Gravel race and gravel surfaces use approximate position and roughness inputs, but the current catalog contains road tires through 35 mm rather than gravel-tire tests. Aero is a relative adjustment against a well-matched GP5000 S TR 28 setup. Rim fit is a modest continuous estimate, not a 105% rule. GP5000 S TR 28 and 30 mounted widths use 32 measurements from the Cyclingnews wheel-tunnel test: 29.8 and 31.4 mm at 23.5 mm internal width. Puncture risk is intentionally excluded.</p>
+            <p class="model-note">Speed is solved from average power at the pedals and a transparent CdA estimate based on riding position, height, shoulder width, cockpit width and kit type. Treat absolute mph as an estimate and compare the tire-to-tire speed gaps. A matched GPX uses FHWA HPMS International Roughness Index (IRI) measurements where they are available. Historic weather uses the selected date’s three prior calendar years. The power-solved speed determines each route sample’s arrival hour, which supplies air density to the speed model and produces a reported apparent-wind yaw. Published tests do show yaw behavior, but this catalog currently stores one aero baseline per tire rather than a digitized tire-and-rim curve at each yaw angle. IRI is translated into this model’s pressure and roughness curve, not treated as a direct laboratory rolling-resistance test. Gravel race and gravel surfaces use approximate position and roughness inputs, but the current catalog contains road tires through 35 mm rather than gravel-tire tests. Aero is a relative adjustment against a well-matched GP5000 S TR 28 setup. Rim fit is a modest continuous estimate, not a 105% rule. GP5000 S TR 28 and 30 mounted widths use 32 measurements from the Cyclingnews wheel-tunnel test: 29.8 and 31.4 mm at 23.5 mm internal width. Puncture risk is intentionally excluded.</p>
             <button id="show-work-button" class="show-work-button" type="button" disabled aria-expanded="false">Show your work</button>
             <section id="work-panel" class="panel" data-testid="work-panel" hidden></section>
+            <div class="wizard-actions"><button class="back-button" type="button" data-wizard-next="3">Back: course and weather</button><span></span></div>
+            </section>
         </section>
 
         <section class="panel sources-panel" data-testid="data-sources">
@@ -353,9 +368,12 @@
         const analyzeWeatherButton = document.getElementById("analyze-weather-button");
         const weatherStatus = document.getElementById("weather-status");
         const cdaPreview = document.getElementById("cda-preview");
+        const courseMode = document.getElementById("course-mode");
+        const pavementPanel = document.getElementById("pavement-panel");
+        const gpxPanel = document.getElementById("gpx-panel");
         const wizardTabs = Array.from(document.querySelectorAll("[data-wizard-target]"));
         const wizardSteps = Array.from(document.querySelectorAll("[data-wizard-step]"));
-        const resultsSection = document.getElementById("results-section");
+        const resultsTab = document.getElementById("results-tab");
         const showWorkButton = document.getElementById("show-work-button");
         const workPanel = document.getElementById("work-panel");
         const hpmsApiUrl = "https://data.transportation.gov/resource/42um-tgh5.json";
@@ -380,9 +398,10 @@
                 "Standard trisuit": -0.005,
                 "Jersey and bibs": 0.010
             }[document.getElementById("kit-type").value];
-            const heightCm = numericValue("rider-height") * 2.54;
-            const shoulderWidthCm = numericValue("shoulder-width") * 2.54;
-            const cockpitWidthCm = numericValue("cockpit-width") * 2.54;
+            const heightCm = numericValue("rider-height-feet") * 30.48
+                + numericValue("rider-height-inches") * 2.54;
+            const shoulderWidthCm = numericValue("shoulder-width");
+            const cockpitWidthCm = numericValue("cockpit-width");
             const bodyScale = Math.sqrt(heightCm / 175 * shoulderWidthCm / 42);
 
             return Math.min(0.50, Math.max(
@@ -396,6 +415,22 @@
             cdaPreview.innerHTML = "Estimated CdA: <strong>"
                 + estimatedCdaPreviewM2().toFixed(3)
                 + " m²</strong>. This is a transparent directional estimate, not a personal aero test.";
+        }
+
+        function updateCourseMode() {
+            const usingGpx = courseMode.value === "gpx";
+            pavementPanel.hidden = usingGpx;
+            gpxPanel.hidden = !usingGpx;
+            if (!usingGpx) {
+                routeFileInput.value = "";
+                routePoints = [];
+                routeProfile = null;
+                weatherProfile = null;
+                analyzeRouteButton.disabled = true;
+                updateRouteStatus("Choose the GPX option to match national road-roughness data.");
+                updateWeatherStatus("Choose the GPX option to use historic weather and yaw.");
+            }
+            updateWeatherButton();
         }
 
         function showWizardStep(stepNumber) {
@@ -427,12 +462,15 @@
             });
         });
 
-        ["bike", "rider-height", "shoulder-width", "cockpit-width", "kit-type"].forEach((elementId) => {
+        ["bike", "rider-height-feet", "rider-height-inches", "shoulder-width", "cockpit-width", "kit-type"].forEach((elementId) => {
             document.getElementById(elementId).addEventListener("input", updateCdaPreview);
             document.getElementById(elementId).addEventListener("change", updateCdaPreview);
         });
 
+        courseMode.addEventListener("change", updateCourseMode);
+
         updateCdaPreview();
+        updateCourseMode();
 
         function updateRouteStatus(message, state = "idle") {
             routeStatus.textContent = message;
@@ -447,6 +485,7 @@
         function updateWeatherButton() {
             analyzeWeatherButton.disabled = (
                 !pythonRuntime
+                || courseMode.value !== "gpx"
                 || routePoints.length < 2
                 || !raceDateInput.value
             );
@@ -767,7 +806,7 @@
             return mappedValues;
         }
 
-        function fallbackIriInchesPerMile() {
+        function pavementIriInchesPerMile() {
             return {
                 "New pavement": 40,
                 "Worn pavement": 80,
@@ -817,7 +856,7 @@
             if (matchedSamples.length === 0) {
                 routeProfile = null;
                 updateRouteStatus(
-                    "No nearby HPMS roughness measurements were available. The selected fallback surface is still in use.",
+                    "No nearby HPMS roughness measurements were available. The selected pavement condition is still in use.",
                     "error"
                 );
                 analyzeRouteButton.disabled = false;
@@ -829,7 +868,7 @@
                 0
             ) / matchedSamples.length;
             const effectiveIri = measuredIri * coverage
-                + fallbackIriInchesPerMile() * (1 - coverage);
+                + pavementIriInchesPerMile() * (1 - coverage);
             const iriYears = [...new Set(
                 matchedSamples.map((sampleMatch) => (
                     sampleMatch.iriDate || ""
@@ -852,7 +891,7 @@
                 "ready"
             );
             analyzeRouteButton.disabled = false;
-            await calculate();
+            await calculate(false);
         }
 
         async function analyzeHistoricWeather() {
@@ -882,7 +921,7 @@
                     startTimeMinutes,
                     historicDates
                 );
-                await calculate();
+                await calculate(false);
             } catch (error) {
                 weatherProfile = null;
                 updateWeatherStatus(error.message, "error");
@@ -901,7 +940,7 @@
                 analyzeRouteButton.disabled = true;
                 updateWeatherButton();
                 updateRouteStatus(
-                    "Upload a GPX to match roughly one-mile route samples to FHWA HPMS road-roughness data. The fallback surface fills any unmatched distance."
+                    "Upload a GPX to match roughly one-mile route samples to FHWA HPMS road-roughness data."
                 );
                 return;
             }
@@ -952,9 +991,10 @@
                 rider_power_watts: numericValue("rider-power"),
                 wheel_bead_diameter_mm: numericValue("wheel-size"),
                 bike_name: document.getElementById("bike").value,
-                rider_height_cm: numericValue("rider-height") * 2.54,
-                shoulder_width_cm: numericValue("shoulder-width") * 2.54,
-                cockpit_width_cm: numericValue("cockpit-width") * 2.54,
+                rider_height_cm: numericValue("rider-height-feet") * 30.48
+                    + numericValue("rider-height-inches") * 2.54,
+                shoulder_width_cm: numericValue("shoulder-width"),
+                cockpit_width_cm: numericValue("cockpit-width"),
                 kit_type: document.getElementById("kit-type").value,
                 surface_name: document.getElementById("surface").value,
                 route_iri_inches_per_mile: routeProfile
@@ -981,7 +1021,7 @@
             const rearRoadLossWatts = winner.rear_rolling_watts + winner.rear_surface_watts;
             const speedMetersPerSecond = winner.predicted_speed_kmh / 3.6;
             const signedWatts = (watts) => (watts >= 0 ? "+" : "") + fixedNumber(watts) + " W";
-            const routeIri = inputs.route_iri_inches_per_mile === null ? "fallback " + inputs.surface_name : fixedNumber(inputs.route_iri_inches_per_mile) + " in/mi";
+            const routeIri = inputs.route_iri_inches_per_mile === null ? "selected " + inputs.surface_name : fixedNumber(inputs.route_iri_inches_per_mile) + " in/mi";
             const routeDescription = inputs.route_iri_inches_per_mile === null ? "the selected " + inputs.surface_name.toLowerCase() + " surface" : "the GPX-matched HPMS roughness of " + routeIri;
             const weatherDescription = inputs.weather_profile ? fixedNumber(winner.air_density_kg_m3) + " kg/m³ and " + fixedNumber(winner.mean_apparent_yaw_degrees) + "° yaw" : "standard 1.225 kg/m³ air and no route-weather yaw";
             workPanel.innerHTML = `
@@ -1055,7 +1095,6 @@
         });
 
         function renderResults(results) {
-            resultsSection.hidden = false;
             const winner = results[0];
             latestWinner = winner;
             latestInputs = calculatorInputs();
@@ -1104,7 +1143,7 @@
             }
         }
 
-        async function calculate() {
+        async function calculate(showResults = true) {
             calculateButton.disabled = true;
             calculateButton.textContent = "Calculating…";
             try {
@@ -1116,6 +1155,10 @@
                     "calculate_json(calculator_input_json)"
                 );
                 renderResults(JSON.parse(resultJson));
+                resultsTab.disabled = false;
+                if (showResults) {
+                    showWizardStep(4);
+                }
                 runtimeStatus.textContent = "Python model ready";
                 runtimeStatus.dataset.state = "ready";
                 document.body.dataset.ready = "true";
@@ -1126,7 +1169,7 @@
                 throw error;
             } finally {
                 calculateButton.disabled = false;
-                calculateButton.textContent = "Calculate fastest system";
+                calculateButton.textContent = "Calculate and view results";
             }
         }
 
@@ -1140,7 +1183,7 @@
                 analyzeRouteButton.disabled = routePoints.length < 2;
                 updateWeatherButton();
                 calculateButton.disabled = false;
-                calculateButton.textContent = "Calculate fastest system";
+                calculateButton.textContent = "Calculate and view results";
                 runtimeStatus.textContent = "Python model ready";
                 runtimeStatus.dataset.state = "ready";
                 document.body.dataset.ready = "true";
