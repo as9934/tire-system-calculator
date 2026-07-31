@@ -220,12 +220,12 @@
 </head>
 <body data-ready="false">
     <header>
-        <small>PYTHON · PYODIDE · MODEL 01</small>
+        <small>TIRE SYSTEM CALCULATOR</small>
         <h1>Find the fastest tire for your system.</h1>
         <p>Pressure, rolling resistance, mounted width and aerodynamic behavior evaluated together.</p>
     </header>
     <main>
-        <p id="runtime-status" data-state="loading">Loading the Python model…</p>
+        <p id="runtime-status" data-state="loading">Preparing calculator…</p>
         <section class="panel">
             <nav class="wizard-nav" aria-label="Calculator steps">
                 <button class="wizard-tab" type="button" data-wizard-target="1" aria-current="step">1. Tire pressure</button>
@@ -301,14 +301,13 @@
                     <div id="weather-panel" class="route-panel">
                         <p class="section-label">Historical weather and yaw (optional)</p>
                         <div class="field-grid">
-                            <label>Race date<input id="race-date" type="date"></label>
+                            <label>Upcoming race date<input id="race-date" type="date"></label>
                             <label>What time will you start biking?<input id="race-start-time" type="time" value="07:00"></label>
                         </div>
-                        <p id="weather-status" data-state="idle">Choose a race date after uploading the GPX. The model uses the same calendar date in each of the three prior years.</p>
-                        <button id="analyze-weather-button" type="button" disabled>Use historic weather for this date</button>
+                        <p id="weather-status" data-state="idle">Enter a future race date after uploading the GPX. The calculator will automatically use the same calendar date in each of the three prior years.</p>
                     </div>
                 </div>
-                <div class="wizard-actions"><button class="back-button" type="button" data-wizard-next="2">Back: rider and bike aero</button><button id="calculate-button" type="button" disabled>Loading Python…</button></div>
+                <div class="wizard-actions"><button class="back-button" type="button" data-wizard-next="2">Back: rider and bike aero</button><button id="calculate-button" type="button" disabled>Preparing calculator…</button></div>
             </section>
             <section id="results-section" class="wizard-step" data-wizard-step="4" aria-live="polite" hidden>
             <p class="section-label">Step 4 of 4</p>
@@ -363,7 +362,6 @@
         const routeStatus = document.getElementById("route-status");
         const raceDateInput = document.getElementById("race-date");
         const raceStartTimeInput = document.getElementById("race-start-time");
-        const analyzeWeatherButton = document.getElementById("analyze-weather-button");
         const weatherStatus = document.getElementById("weather-status");
         const cdaPreview = document.getElementById("cda-preview");
         const courseMode = document.getElementById("course-mode");
@@ -381,6 +379,7 @@
         let routePoints = [];
         let routeProfile = null;
         let weatherProfile = null;
+        let weatherLoadInProgress = false;
         let latestWinner = null;
         let latestInputs = null;
 
@@ -427,7 +426,6 @@
                 updateRouteStatus("Choose the GPX option to match national road-roughness data.");
                 updateWeatherStatus("Choose the GPX option to use historic weather and yaw.");
             }
-            updateWeatherButton();
         }
 
         function showWizardStep(stepNumber) {
@@ -479,14 +477,30 @@
             weatherStatus.dataset.state = state;
         }
 
-        function updateWeatherButton() {
-            analyzeWeatherButton.disabled = (
-                !pythonRuntime
-                || courseMode.value !== "gpx"
-                || routePoints.length < 2
-                || !raceDateInput.value
+        function futureRaceDateString() {
+            const now = new Date();
+            now.setDate(now.getDate() + 1);
+            return now.getFullYear() + "-"
+                + String(now.getMonth() + 1).padStart(2, "0") + "-"
+                + String(now.getDate()).padStart(2, "0");
+        }
+
+        function canLoadHistoricWeather() {
+            return Boolean(
+                pythonRuntime
+                && courseMode.value === "gpx"
+                && routePoints.length >= 2
+                && raceDateInput.value >= raceDateInput.min
             );
         }
+
+        async function loadHistoricWeatherIfReady() {
+            if (canLoadHistoricWeather()) {
+                await analyzeHistoricWeather();
+            }
+        }
+
+        raceDateInput.min = futureRaceDateString();
 
         function haversineMeters(firstPoint, secondPoint) {
             const radians = Math.PI / 180;
@@ -886,18 +900,19 @@
                 "ready"
             );
             await calculate(false);
+            await loadHistoricWeatherIfReady();
         }
 
         async function analyzeHistoricWeather() {
-            if (routePoints.length < 2 || !raceDateInput.value) {
+            if (!canLoadHistoricWeather() || weatherLoadInProgress) {
                 return;
             }
+            weatherLoadInProgress = true;
             const routeDetails = routeSamplesFromPoints(routePoints);
             const routeSamples = weatherRouteSamples();
             const historicDates = historicDateStrings(raceDateInput.value);
             const startTimeParts = raceStartTimeInput.value.split(":").map(Number);
             const startTimeMinutes = startTimeParts[0] * 60 + startTimeParts[1];
-            analyzeWeatherButton.disabled = true;
             calculateButton.disabled = true;
             updateWeatherStatus(
                 "Loading " + historicDates.join(", ") + " weather at "
@@ -918,9 +933,9 @@
                 await calculate(false);
             } catch (error) {
                 weatherProfile = null;
-                updateWeatherStatus(error.message, "error");
+                updateWeatherStatus("Unable to load historic weather. Check the race date and try again.", "error");
             } finally {
-                updateWeatherButton();
+                weatherLoadInProgress = false;
                 calculateButton.disabled = false;
             }
         }
@@ -931,7 +946,6 @@
             const routeFile = routeFileInput.files[0];
             if (!routeFile) {
                 routePoints = [];
-                updateWeatherButton();
                 updateRouteStatus(
                     "Upload a GPX and the road-roughness match will start automatically."
                 );
@@ -940,7 +954,6 @@
             try {
                 routePoints = parseGpxRoute(await routeFile.text());
                 const routeDetails = routeSamplesFromPoints(routePoints);
-                updateWeatherButton();
                 updateRouteStatus(
                     "Starting road-roughness match for " + routeFile.name + ": "
                         + (routeDetails.routeDistanceMeters / metersPerMile).toFixed(1)
@@ -951,26 +964,26 @@
                 await analyzeRouteRoughness();
             } catch (error) {
                 routePoints = [];
-                updateWeatherButton();
-                updateRouteStatus(error.message, "error");
+                updateRouteStatus("Unable to read that GPX file. Choose a valid GPX and try again.", "error");
             }
         });
 
-        raceDateInput.addEventListener("change", () => {
+        raceDateInput.addEventListener("change", async () => {
             weatherProfile = null;
-            updateWeatherButton();
-            updateWeatherStatus(
-                "Use the same calendar date from the three prior years after choosing a GPX."
-            );
+            if (!raceDateInput.value || raceDateInput.value < raceDateInput.min) {
+                updateWeatherStatus("Enter an upcoming race date. Historic weather is drawn from the same date in the prior three years.");
+                return;
+            }
+            if (routePoints.length < 2) {
+                updateWeatherStatus("Your upcoming race date is set. Upload a GPX to load historic weather and yaw automatically.");
+                return;
+            }
+            await loadHistoricWeatherIfReady();
         });
 
-        raceStartTimeInput.addEventListener("change", () => {
-            if (weatherProfile) {
-                weatherProfile = null;
-                updateWeatherStatus(
-                    "Start time changed. Reload historic weather to update each course point’s arrival hour."
-                );
-            }
+        raceStartTimeInput.addEventListener("change", async () => {
+            weatherProfile = null;
+            await loadHistoricWeatherIfReady();
         });
 
         function numericValue(elementId) {
@@ -1151,11 +1164,11 @@
                 if (showResults) {
                     showWizardStep(4);
                 }
-                runtimeStatus.textContent = "Python model ready";
-                runtimeStatus.dataset.state = "ready";
+                runtimeStatus.hidden = true;
                 document.body.dataset.ready = "true";
             } catch (error) {
-                runtimeStatus.textContent = `Calculation failed: ${error.message}`;
+                runtimeStatus.hidden = false;
+                runtimeStatus.textContent = "Unable to calculate this setup. Check the inputs and try again.";
                 runtimeStatus.dataset.state = "error";
                 document.body.dataset.ready = "error";
                 throw error;
@@ -1170,18 +1183,16 @@
                 pythonRuntime = await loadPyodide();
                 await pythonRuntime.runPythonAsync(pythonModelSource);
                 calculateButton.addEventListener("click", calculate);
-                analyzeWeatherButton.addEventListener("click", analyzeHistoricWeather);
-                updateWeatherButton();
                 if (routePoints.length >= 2) {
                     await analyzeRouteRoughness();
                 }
                 calculateButton.disabled = false;
                 calculateButton.textContent = "Calculate and view results";
-                runtimeStatus.textContent = "Python model ready";
-                runtimeStatus.dataset.state = "ready";
+                runtimeStatus.hidden = true;
                 document.body.dataset.ready = "true";
             } catch (error) {
-                runtimeStatus.textContent = `Model failed to load: ${error.message}`;
+                runtimeStatus.hidden = false;
+                runtimeStatus.textContent = "Unable to prepare the calculator. Refresh the page and try again.";
                 runtimeStatus.dataset.state = "error";
                 document.body.dataset.ready = "error";
                 console.error(error);
