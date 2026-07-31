@@ -296,8 +296,7 @@
                     <div class="route-panel">
                         <p class="section-label">Course roughness</p>
                         <label>GPX course file<input id="route-file" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
-                        <p id="route-status" data-state="idle">Upload a GPX to match roughly one-mile route samples to FHWA HPMS road-roughness data.</p>
-                        <button id="analyze-route-button" type="button" disabled>Match GPX to road roughness</button>
+                        <p id="route-status" data-state="idle">Upload a GPX and the calculator will automatically match roughly one-mile route samples to FHWA HPMS road-roughness data.</p>
                     </div>
                     <div id="weather-panel" class="route-panel">
                         <p class="section-label">Historical weather and yaw (optional)</p>
@@ -361,7 +360,6 @@
         const runtimeStatus = document.getElementById("runtime-status");
         const calculateButton = document.getElementById("calculate-button");
         const routeFileInput = document.getElementById("route-file");
-        const analyzeRouteButton = document.getElementById("analyze-route-button");
         const routeStatus = document.getElementById("route-status");
         const raceDateInput = document.getElementById("race-date");
         const raceStartTimeInput = document.getElementById("race-start-time");
@@ -426,7 +424,6 @@
                 routePoints = [];
                 routeProfile = null;
                 weatherProfile = null;
-                analyzeRouteButton.disabled = true;
                 updateRouteStatus("Choose the GPX option to match national road-roughness data.");
                 updateWeatherStatus("Choose the GPX option to use historic weather and yaw.");
             }
@@ -818,13 +815,12 @@
         }
 
         async function analyzeRouteRoughness() {
-            if (routePoints.length < 2) {
+            if (!pythonRuntime || routePoints.length < 2) {
                 return;
             }
             const routeDetails = routeSamplesFromPoints(routePoints);
             const routeDistanceMeters = routeDetails.routeDistanceMeters;
             const routeSamples = routeDetails.routeSamples;
-            analyzeRouteButton.disabled = true;
             calculateButton.disabled = true;
             let completedSamples = 0;
             updateRouteStatus(
@@ -859,7 +855,6 @@
                     "No nearby HPMS roughness measurements were available. The selected pavement condition is still in use.",
                     "error"
                 );
-                analyzeRouteButton.disabled = false;
                 calculateButton.disabled = false;
                 return;
             }
@@ -890,7 +885,6 @@
                     + (iriYears ? " · measured " + iriYears : "") + ".",
                 "ready"
             );
-            analyzeRouteButton.disabled = false;
             await calculate(false);
         }
 
@@ -937,28 +931,26 @@
             const routeFile = routeFileInput.files[0];
             if (!routeFile) {
                 routePoints = [];
-                analyzeRouteButton.disabled = true;
                 updateWeatherButton();
                 updateRouteStatus(
-                    "Upload a GPX to match roughly one-mile route samples to FHWA HPMS road-roughness data."
+                    "Upload a GPX and the road-roughness match will start automatically."
                 );
                 return;
             }
             try {
                 routePoints = parseGpxRoute(await routeFile.text());
                 const routeDetails = routeSamplesFromPoints(routePoints);
-                analyzeRouteButton.disabled = !pythonRuntime;
                 updateWeatherButton();
                 updateRouteStatus(
-                    routeFile.name + " is ready: "
+                    "Starting road-roughness match for " + routeFile.name + ": "
                         + (routeDetails.routeDistanceMeters / metersPerMile).toFixed(1)
                         + " mi and " + routeDetails.routeSamples.length
                         + " roughness samples.",
-                    "ready"
+                    "loading"
                 );
+                await analyzeRouteRoughness();
             } catch (error) {
                 routePoints = [];
-                analyzeRouteButton.disabled = true;
                 updateWeatherButton();
                 updateRouteStatus(error.message, "error");
             }
@@ -1178,10 +1170,11 @@
                 pythonRuntime = await loadPyodide();
                 await pythonRuntime.runPythonAsync(pythonModelSource);
                 calculateButton.addEventListener("click", calculate);
-                analyzeRouteButton.addEventListener("click", analyzeRouteRoughness);
                 analyzeWeatherButton.addEventListener("click", analyzeHistoricWeather);
-                analyzeRouteButton.disabled = routePoints.length < 2;
                 updateWeatherButton();
+                if (routePoints.length >= 2) {
+                    await analyzeRouteRoughness();
+                }
                 calculateButton.disabled = false;
                 calculateButton.textContent = "Calculate and view results";
                 runtimeStatus.textContent = "Python model ready";
